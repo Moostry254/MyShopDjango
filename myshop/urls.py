@@ -6,9 +6,6 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    # TEMPORARY URL: MUST BE REMOVED AFTER USE
-    path('create-admin/', create_initial_superuser, name='create_initial_superuser'),
-    # END TEMPORARY URL
     path('admin/', admin.site.urls),
     # Keep only this line if you want your shop to be the homepage
     path('', include('shop.urls')),
