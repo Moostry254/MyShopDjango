@@ -227,3 +227,26 @@ def checkout_view(request):
 
     return render(request, 'shop/checkout.html', {'cart': cart})
 
+# --- TEMPORARY: FOR ONE-TIME ADMIN CREATION ONLY ---
+def create_initial_superuser(request):
+    """
+    A temporary view to create an initial superuser on Render.
+    This view MUST be removed immediately after use for security.
+    """
+    if request.method == 'GET':
+        username = os.environ.get('DJANGO_ADMIN_USERNAME', 'renderadmin') # Get from environment or use default
+        password = os.environ.get('DJANGO_ADMIN_PASSWORD', 'renderpassword') # Get from environment or use default
+
+        # Only create if the user doesn't exist to prevent errors on repeated access
+        if not User.objects.filter(username=username).exists():
+            try:
+                user = User.objects.create_superuser(username=username, email='admin@myshop.com', password=password)
+                user.save()
+                return HttpResponse(f"Superuser '{username}' created successfully. Now go to /admin/ and login. REMOVE THIS VIEW IMMEDIATELY!", status=200)
+            except Exception as e:
+                return HttpResponse(f"Error creating superuser: {e}. REMOVE THIS VIEW AFTER DEBUGGING!", status=500)
+        else:
+            return HttpResponse(f"Superuser '{username}' already exists. REMOVE THIS VIEW IMMEDIATELY!", status=200)
+    return HttpResponse("Access this view via GET request to create superuser. REMOVE THIS VIEW!", status=405)
+
+# --- END TEMPORARY CODE ---
