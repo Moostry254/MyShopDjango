@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Order History - My Shop</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8f8f8; }
+        .btn-primary { background: linear-gradient(to right, #6B46C1, #8B5CF6); transition: background 0.3s ease-in-out; }
+        .btn-primary:hover { background: linear-gradient(to right, #8B5CF6, #6B46C1); }
+        .scroll-to-top {
+            position: fixed; bottom: 20px; right: 20px; background-color: #8B5CF6; color: white; border-radius: 50%;
+            padding: 10px 15px; font-size: 1.5rem; display: none; cursor: pointer; z-index: 1000; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s;
+        }
+        .scroll-to-top:hover { background-color: #6B46C1; }
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px; /* full rounded */
+            font-size: 0.875rem; /* text-sm */
+            font-weight: 600; /* font-semibold */
+            text-transform: uppercase;
+        }
+        .status-Pending { background-color: #fef9c3; color: #854d09; } /* yellow-100, yellow-800 */
+        .status-Processing { background-color: #bfdbfe; color: #1e40af; } /* blue-200, blue-800 */
+        .status-Shipped { background-color: #d1fae5; color: #065f46; } /* green-100, green-800 */
+        .status-Delivered { background-color: #a7f3d0; color: #065f46; } /* green-200, green-800 */
+        .status-Cancelled { background-color: #fee2e2; color: #991b1b; } /* red-100, red-800 */
+
+        /* Chatbot styles (copied from product_list.html) */
+        .chatbot-container {
+            position: fixed; bottom: 90px; right: 20px; width: 320px; height: 400px; background-color: white;
+            border-radius: 1rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); display: none; flex-direction: column;
+            overflow: hidden; z-index: 1001; border: 1px solid #ddd;
+        }
+        .chatbot-header {
+            background: linear-gradient(to right, #6B46C1, #8B5CF6); color: white; padding: 1rem; display: flex;
+            justify-content: space-between; align-items: center; border-top-left-radius: 1rem; border-top-right-radius: 1rem;
+        }
+        .chatbot-messages { flex-grow: 1; padding: 1rem; overflow-y: auto; background-color: #f2f2f2; }
+        .chatbot-quick-replies { padding: 0.75rem 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; border-top: 1px solid #eee; background-color: #fff; }
+        .quick-reply-btn {
+            background-color: #e0f2fe; color: #1e40af; padding: 0.5rem 0.75rem; border-radius: 0.5rem;
+            cursor: pointer; font-size: 0.875rem; transition: background-color 0.2s, transform 0.1s;
+        }
+        .quick-reply-btn:hover { background-color: #bfdbfe; transform: translateY(-1px); }
+        .chatbot-input-container { padding: 1rem; border-top: 1px solid #eee; display: flex; gap: 0.5rem; }
+        .chatbot-input { flex-grow: 1; padding: 0.75rem; border: 1px solid #ccc; border-radius: 0.5rem; outline: none; }
+        .chatbot-send-btn { background-color: #8B5CF6; color: white; padding: 0.75rem 1rem; border-radius: 0.5rem; cursor: pointer; transition: background-color 0.3s; }
+        .chatbot-send-btn:hover { background-color: #6B46C1; }
+        .chatbot-toggle-btn {
+            position: fixed; bottom: 20px; right: 20px; background-color: #8B5CF6; color: white; border-radius: 50%;
+            padding: 15px; font-size: 2rem; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 1002; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s, background-color 0.3s;
+        }
+        .chatbot-toggle-btn:hover { transform: scale(1.05); background-color: #6B46C1; }
+        .chat-message { margin-bottom: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.75rem; max-width: 80%; word-wrap: break-word; }
+        .chat-message.user { background-color: #e0f2fe; align-self: flex-end; margin-left: auto; }
+        .chat-message.bot { background-color: #e6e6e6; align-self: flex-start; margin-right: auto; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <!-- Header/Navigation Bar - Copied from product_list.html -->
+    <header class="bg-gradient-to-r from-purple-700 to-indigo-700 text-white shadow-lg py-4">
+        <div class="container mx-auto flex flex-wrap justify-between items-center px-4 md:px-6">
+            <a href="/" class="text-3xl font-bold flex items-center rounded-lg p-2 hover:bg-white hover:bg-opacity-20 transition duration-300 z-20">
+                My Shop
+            </a>
+            <div class="block lg:hidden order-2 z-20">
+                <button id="menu-toggle" class="text-white focus:outline-none">
+                    <i class="fas fa-bars text-3xl"></i>
+                </button>
+            </div>
+            <div class="header-search-container flex-grow order-3 lg:order-2 flex justify-center lg:justify-start w-full lg:w-auto mt-4 lg:mt-0 lg:ml-8">
+                <div class="relative w-full max-w-xl">
+                    <input type="text" placeholder="Search products..." class="w-full py-2 pl-4 pr-10 rounded-full text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-300">
+                    <button class="absolute right-0 top-0 mt-2 mr-3 text-gray-600">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+            <ul id="nav-icons" class="hidden lg:flex flex-col lg:flex-row lg:space-x-4 mt-4 lg:mt-0 items-center order-4 lg:order-3">
+                <li><a href="#" class="flex items-center justify-center h-10 w-10 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300" aria-label="Wishlist"><i class="fas fa-heart text-xl"></i></a></li>
+                <li><a href="#" class="flex items-center justify-center h-10 w-10 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300" aria-label="Cart"><i class="fas fa-shopping-cart text-xl"></i></a></li>
+                <li><a href="{% url 'shop:order_history' %}" class="flex items-center space-x-2 py-2 px-4 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300"><i class="fas fa-truck"></i><span>Orders</span></a></li>
+                <li><a href="#" class="flex items-center space-x-2 py-2 px-4 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300"><i class="fas fa-user-circle"></i><span>Account</span></a></li>
+            </ul>
+            <ul id="nav-menu-mobile" class="hidden lg:hidden flex-col w-full mt-4 space-y-2 order-5">
+                <li><a href="#" class="flex items-center space-x-2 py-2 px-4 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300"><i class="fas fa-heart"></i><span>Wishlist</span></a></li>
+                <li><a href="#" class="flex items-center space-x-2 py-2 px-4 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300"><i class="fas fa-shopping-cart"></i><span>Cart</span></a></li>
+                <li><a href="{% url 'shop:order_history' %}" class="flex items-center space-x-2 py-2 px-4 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300"><i class="fas fa-truck"></i><span>Orders</span></a></li>
+                <li><a href="#" class="flex items-center space-x-2 py-2 px-4 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300"><i class="fas fa-user-circle"></i><span>Account</span></a></li>
+            </ul>
+        </div>
+    </header>
+
+    <main class="flex-grow py-8 md:py-16 bg-gray-100">
+        <div class="container mx-auto px-4 md:px-6">
+            <h1 class="text-4xl font-bold text-gray-800 mb-8 text-center">My Orders</h1>
+
+            {% if orders %}
+                <div class="space-y-6">
+                    {% for order in orders %}
+                        <div class="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 pb-4 border-b border-gray-200">
+                                <div>
+                                    <h2 class="text-2xl font-semibold text-gray-800">Order #{{ order.id }}</h2>
+                                    <p class="text-gray-600 text-sm">Placed on {{ order.created|date:"F d, Y, P" }}</p>
+                                </div>
+                                <div class="mt-3 md:mt-0">
+                                    <span class="status-badge status-{{ order.status }}">{{ order.status }}</span>
+                                    {% if order.paid %}
+                                        <span class="status-badge bg-green-100 text-green-800 ml-2">Paid</span>
+                                    {% else %}
+                                        <span class="status-badge bg-red-100 text-red-800 ml-2">Unpaid</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <h3 class="text-lg font-semibold text-gray-700 mb-2">Order Details:</h3>
+                                <ul class="space-y-2">
+                                    {% for item in order.items.all %}
+                                        <li class="flex items-center space-x-4">
+                                            <img src="{% if item.product.image %}{{ item.product.image.url }}{% else %}https://placehold.co/80x80/e0e0e0/000000?text=No+Image{% endif %}" alt="{{ item.product.name }}" class="w-16 h-16 object-cover rounded-md shadow-sm">
+                                            <div class="flex-grow">
+                                                <p class="font-medium text-gray-800">{{ item.product.name }}</p>
+                                                <p class="text-gray-600 text-sm">Quantity: {{ item.quantity }} x &#x09F3;{{ item.price }}</p>
+                                            </div>
+                                            <span class="font-semibold text-gray-800">&#x09F3;{{ item.get_cost }}</span>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+
+                            <div class="border-t border-gray-200 pt-4 flex justify-between items-center">
+                                <span class="text-xl font-bold text-gray-800">Total: &#x09F3;{{ order.get_total_cost }}</span>
+                                <a href="#" class="text-purple-600 hover:underline text-md font-medium">View Order Details <i class="fas fa-chevron-right ml-1 text-sm"></i></a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="bg-white rounded-xl shadow-md p-8 text-center">
+                    <i class="fas fa-box-open text-6xl text-gray-400 mb-6"></i>
+                    <p class="text-xl text-gray-700 mb-4">You haven't placed any orders yet.</p>
+                    <p class="text-gray-500 mb-6">Start shopping now to see your order history here!</p>
+                    <a href="{% url 'shop:product_list' %}" class="btn-primary text-white py-3 px-8 rounded-full font-semibold shadow-lg hover:scale-105 transform transition-all duration-300">
+                        Shop Now <i class="fas fa-shopping-bag ml-2"></i>
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </main>
+
+    <!-- Footer, Scroll to Top, Chatbot (Copied from product_list.html) -->
+    <footer class="bg-gray-800 text-gray-300 py-12">
+        <div class="container mx-auto px-4 md:px-6 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            <div><h3 class="text-xl font-semibold text-white mb-4">My Shop</h3><p class="text-sm leading-relaxed">Dedicated to providing a wide range of authentic religious products to enhance your spiritual journey.</p></div>
+            <div><h3 class="text-xl font-semibold text-white mb-4">Quick Links</h3><ul class="space-y-2"><li><a href="#" class="text-gray-400 hover:text-white transition duration-200">Shop All</a></li><li><a href="#" class="text-gray-400 hover:text-white transition duration-200">Categories</a></li><li><a href="#" class="text-gray-400 hover:text-white transition duration-200">FAQs</a></li><li><a href="#" class="text-gray-400 hover:text-white transition duration-200">Privacy Policy</a></li><li><a href="#" class="text-gray-400 hover:text-white transition duration-200">Terms of Service</a></li></ul></div>
+            <div><h3 class="text-xl font-semibold text-white mb-4">Contact Us</h3><p class="text-sm">Email: <a href="mailto:info@myshop.co.bd" class="text-gray-400 hover:text-white">info@myshop.co.bd</a></p><p class="text-sm">Phone: <a href="tel:+880XXXXXXXXXX" class="text-gray-400 hover:text-white">+880 XXXXXXXXXX</a></p><div class="flex space-x-4 mt-4"><a href="#" class="text-gray-400 hover:text-white text-2xl"><i class="fab fa-facebook-f"></i></a><a href="#" class="text-gray-400 hover:text-white text-2xl"><i class="fab fa-twitter"></i></a><a href="#" class="text-gray-400 hover:text-white text-2xl"><i class="fab fa-instagram"></i></a><a href="#" class="text-gray-400 hover:text-white text-2xl"><i class="fab fa-pinterest"></i></a></div></div>
+            <div><h3 class="text-xl font-semibold text-white mb-4">Payments & Shipping</h3><p class="text-sm">We accept local payment methods in BDT, including mobile banking, alongside Visa and MasterCard.</p><p class="text-sm mt-2">Products are sourced locally within Bangladesh and shipped reliably nationwide.</p><p class="text-sm mt-1">Enjoy fast and convenient delivery right to your doorstep.</p><div class="flex flex-wrap gap-2 mt-4"><img src="https://placehold.co/60x30/FFFFFF/000000?text=Bkash" alt="Bkash" class="h-8 rounded-md shadow-sm"><img src="https://placehold.co/60x30/FFFFFF/000000?text=Nagad" alt="Nagad" class="h-8 rounded-md shadow-sm"><img src="https://placehold.co/60x30/FFFFFF/000000?text=Visa" alt="Visa" class="h-8 rounded-md shadow-sm"><img src="https://placehold.co/60x30/FFFFFF/000000?text=Mastercard" alt="Mastercard" class="h-8 rounded-md shadow-sm"></div></div>
+        </div>
+        <div class="border-t border-gray-700 mt-8 pt-8 text-center"><p class="text-sm text-gray-500">&copy; 2025 My Shop. All rights reserved.</p></div>
+    </footer>
+    <div class="scroll-to-top" id="scrollToTopBtn"><i class="fas fa-arrow-up"></i></div>
+    <div class="chatbot-toggle-btn" id="chatbotToggleBtn"><i class="fas fa-comments"></i></div>
+    <div class="chatbot-container" id="chatbotContainer">
+        <div class="chatbot-header"><h3 class="text-lg font-semibold">My Shop Assistant</h3><button id="closeChatbotBtn" class="text-white text-xl focus:outline-none">&times;</button></div>
+        <div class="chatbot-messages" id="chatbotMessages"><div class="chat-message bot">Hello! How can I assist you today?</div></div>
+        <div class="chatbot-quick-replies" id="chatbotQuickReplies">
+            <button class="quick-reply-btn" data-reply="What are your shipping options?">Shipping Options</button>
+            <button class="quick-reply-btn" data-reply="How can I track my order?">Track Order</button>
+            <button class="quick-reply-btn" data-reply="What is your return policy?">Return Policy</button>
+            <button class="quick-reply-btn" data-reply="Can you recommend a product?">Product Recommendation</button>
+        </div>
+        <div class="chatbot-input-container"><input type="text" id="chatbotInput" class="chatbot-input" placeholder="Type your message..."><button id="chatbotSendBtn" class="chatbot-send-btn">Send</button></div>
+    </div>
+    <script>
+        // JavaScript for mobile menu toggle
+        const menuToggle = document.getElementById('menu-toggle');
+        const navMenuMobile = document.getElementById('nav-menu-mobile');
+        menuToggle.addEventListener('click', () => { navMenuMobile.classList.toggle('hidden'); navMenuMobile.classList.toggle('flex'); navMenuMobile.classList.toggle('flex-col'); });
+
+        // JavaScript for scroll to top button
+        const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+        window.addEventListener('scroll', () => { if (window.scrollY > 300) { scrollToTopBtn.style.display = 'block'; } else { scrollToTopBtn.style.display = 'none'; } });
+        scrollToTopBtn.addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
+        // Slideshow JavaScript - UPDATED FOR DYNAMIC CONTENT AND ERROR FIX
+        let slideIndex = 1;
+        let slideTimer;
+
+        // Function to show slides
+        function showSlides(n) {
+            let i;
+            let slides = document.getElementsByClassName("mySlides");
+            let dots = document.getElementsByClassName("dot");
+
+            // Added check to ensure slides and dots exist and are not empty
+            if (slides.length === 0) {
+                clearTimeout(slideTimer);
+                // Optionally hide navigation if no slides are present
+                const prevButton = document.querySelector('.prev');
+                const nextButton = document.querySelector('.next');
+                if (prevButton) prevButton.style.display = 'none';
+                if (nextButton) nextButton.style.display = 'none';
+                return;
+            }
+
+            // Ensure dots array is populated before trying to access its elements
+            // This happens if there's only one slide, so no dots are rendered
+            if (dots.length === 0 && slides.length === 1) {
+                 // No dots needed for a single slide, but we still want to show the slide
+                 slides[0].style.display = "block";
+                 return; // Exit if only one slide and no dots
+            } else if (dots.length === 0 && slides.length > 1) {
+                // This indicates an issue in the Django template not rendering dots
+                console.error("Slides exist but no dots are rendered. Check your Django template loop for slideshow-dots.");
+                clearTimeout(slideTimer);
+                return;
+            }
+
+
+            if (n > slides.length) { slideIndex = 1 }
+            if (n < 1) { slideIndex = slides.length }
+
+            for (i = 0; i < slides.length; i++) {
+                slides[i].style.display = "none";
+            }
+            for (i = 0; i < dots.length; i++) {
+                dots[i].className = dots[i].className.replace(" active-dot", "");
+            }
+
+            slides[slideIndex - 1].style.display = "block";
+            dots[slideIndex - 1].className += " active-dot";
+
+            clearTimeout(slideTimer);
+            slideTimer = setTimeout(() => plusSlides(1), 5000); // Change slide every 5 seconds
+        }
+
+        // Next/previous controls
+        function plusSlides(n) {
+            showSlides(slideIndex += n);
+        }
+
+        // Thumbnail image controls
+        function currentSlide(n) {
+            showSlides(slideIndex = n);
+        }
+
+        // Initialize slideshow on window load
+        window.addEventListener('load', () => {
+            showSlides(slideIndex);
+        });
+
+        // Chatbot JavaScript
+        const chatbotToggleBtn = document.getElementById('chatbotToggleBtn');
+        const chatbotContainer = document.getElementById('chatbotContainer');
+        const closeChatbotBtn = document = document.getElementById('closeChatbotBtn');
+        const chatbotInput = document.getElementById('chatbotInput');
+        const chatbotSendBtn = document.getElementById('chatbotSendBtn');
+        const chatbotMessages = document.getElementById('chatbotMessages');
+        const chatbotQuickReplies = document.getElementById('chatbotQuickReplies');
+
+        chatbotToggleBtn.addEventListener('click', () => { chatbotContainer.style.display = chatbotContainer.style.display === 'flex' ? 'none' : 'flex'; });
+        closeChatbotBtn.addEventListener('click', () => { chatbotContainer.style.display = 'none'; });
+
+        function sendMessage(message) {
+            const userMessage = message || chatbotInput.value.trim();
+            if (userMessage === '') return;
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.classList.add('chat-message', 'user');
+            userMessageDiv.textContent = userMessage;
+            chatbotMessages.appendChild(userMessageDiv);
+            if (!message) { chatbotInput.value = ''; }
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+
+            setTimeout(() => {
+                const botMessageDiv = document.createElement('div');
+                botMessageDiv.classList.add('chat-message', 'bot');
+                let botResponse = "Thank you for your message! Our assistant will get back to you shortly.";
+                if (userMessage === "What are your shipping options?") { botResponse = "We offer standard and expedited shipping options. Please refer to our Shipping Policy for details.";
+                } else if (userMessage === "How can I track my order?") { botResponse = "You can track your order using the tracking number provided in your shipping confirmation email.";
+                } else if (userMessage === "What is your return policy?") { botResponse = "Our return policy allows returns within 30 days of purchase for eligible items. See our Returns page for full details.";
+                } else if (userMessage === "Can you recommend a product?") { botResponse = "Certainly! Are you looking for religious texts, prayer items, or perhaps something for home decor?"; }
+                chatbotMessages.appendChild(botMessageDiv);
+                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+            }, 500);
+        }
+
+        chatbotSendBtn.addEventListener('click', () => sendMessage());
+        chatbotInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { sendMessage(); } });
+        chatbotQuickReplies.querySelectorAll('.quick-reply-btn').forEach(button => {
+            button.addEventListener('click', () => { sendMessage(button.dataset.reply); });
+        });
+    </script>
+</body>
+</html>
+```
+
+---
+
+To make sure your customers don't access or even see the dashboard, the primary step is to **remove the links** that point to `/admin/` from your website's public-facing pages.
+
+I've updated the `product-list-template-corrected-empty` Canvas to remove the dashboard links. Specifically:
+
+1.  The `<li>` containing the "Dashboard" link in the desktop navigation (`id="nav-icons"`) has been removed.
+2.  The `<li>` containing the "Dashboard" link in the mobile navigation (`id="nav-menu-mobile"`) has also been removed.
+
+With these changes, the link to the admin dashboard will no longer be visible to regular users browsing your shop.
+
+---
+
+### Next Steps:
+
+1.  **Save the updated `product_list.html` file.**
+2.  **Restart your Django development server:**
+    ```bash
+    python manage.py runserver
+    ```
+3.  **Check your site:** Open your shop's homepage (`http://127.0.0.1:8000/`) in an incognito window or a browser where you are not logged into the admin. You should no longer see any "Dashboard" links.
+
+This ensures that only authenticated staff users who explicitly know the `/admin/s" from the product-list-template-corrected-empty immersive.Okay, I understand you're looking to integrate several new features into your My Shop application! This is an excellent way to enhance the user experience and add more robust functionality. We'll go through each of these step-by-step.
+
+This will involve creating new models, updating existing views, creating new views, adding new URLs, and making significant changes to your `product_list.html` template, especially for the chatbot.
+
+---
+
+## 🚀 Enhancing Your My Shop Application
+
+Let's integrate these new features. Remember to perform **`python manage.py makemigrations`** and **`python manage.py migrate`** after any model changes, and always **restart your Django development server (`python manage.py runserver`)** after any code or template changes to see the effects.
+
+---
+
+## 1. Order Tracking System 📦
+
+To allow customers to track orders, we need models to store order details and a page for users to view their past orders.
+
+### 1.1. Update `shop/models.py` (Add Order and OrderItem Models)
+
+We'll add `Order` and `OrderItem` models. The `Order` will link to your `CustomUser` and store general order details, while `OrderItem` will link to a specific `Product` within an `Order`.
+
+Please **add** the following code to your `shop/models.py` file, ideally below your `Product` and `Slide` models.
+
+```python
+# shop/models.py
+# ... (existing imports and models: CustomUser, Category, Product, Slide) ...
+
+# Order Model
+class Order(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='orders', null=True, blank=True)
+    # Using null=True, blank=True for user in case of guest checkout or anonymous orders
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+    email = models.EmailField()
+    address = models.CharField(max_length=250)
+    postal_code = models.CharField(max_length=20)
+    city = models.CharField(max_length=100)
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+    paid = models.BooleanField(default=False)
+    # Status field for tracking (e.g., Pending, Processing, Shipped, Delivered, Cancelled)
+    STATUS_CHOICES = (
+        ('Pending', 'Pending'),
+        ('Processing', 'Processing'),
+        ('Shipped', 'Shipped'),
+        ('Delivered', 'Delivered'),
+        ('Cancelled', 'Cancelled'),
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+
+    class Meta:
+        ordering = ('-created',) # Order by most recent orders
+
+    def __str__(self):
+        return f'Order {self.id}'
+
+    def get_total_cost(self):
+        # Calculate total cost by summing up cost of all order items
+        return sum(item.get_cost() for item in self.items.all())
+
+# Order Item Model
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, related_name='order_items', on_delete=models.CASCADE)
+    price = models.DecimalField(max_digits=10, decimal_places=2) # Price at the time of purchase
+    quantity = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        return str(self.id)
+
+    def get_cost(self):
+        # Calculate cost for a single order item
+        return self.price * self.quantity
+```
+
+### 1.2. Update `shop/admin.py` (Register Order Models)
+
+To manage orders in your Jazzmin dashboard, you need to register the new `Order` and `OrderItem` models. We'll use an `Inline` for `OrderItem` so you can add items directly when viewing an order.
+
+Please **add** the following code to your `shop/admin.py` file:
+
+```python
+# shop/admin.py
+# ... (existing imports and admin registrations: CategoryAdmin, ProductAdmin, CustomUserAdmin) ...
+
+# Inline for OrderItem to be displayed within OrderAdmin
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    raw_id_fields = ['product'] # Improves performance for many products
+
+# Register Order model
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ['id', 'first_name', 'email', 'address', 'paid', 'status', 'created', 'updated']
+    list_filter = ['paid', 'status', 'created', 'updated']
+    search_fields = ['id', 'first_name', 'last_name', 'email']
+    inlines = [OrderItemInline] # Add the inline here
+    # Allow editing status and paid directly from the list view
+    list_editable = ['status', 'paid']
+```
+
+### 1.3. Make New Migrations
+
+After adding the new models, you must create and apply new database migrations.
+
+In your terminal (with your virtual environment active):
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+### 1.4. Update `shop/views.py` (Add Order History View)
+
+We'll add a new view that allows authenticated users to see their order history.
+
+Please **add** the following code to your `shop/views.py` file:
+
+```python
+# shop/views.py
+# ... (existing imports and views: product_list, product_detail) ...
+
+from django.contrib.auth.decorators import login_required # Import for login requirement
+from django.db.models import Count # Import Count for user count later
+
+@login_required # Ensure only logged-in users can view their orders
+def order_history(request):
+    orders = Order.objects.filter(user=request.user).order_by('-created')
+    return render(request, 'shop/order_history.html', {'orders': orders})
+```
+
+### 1.5. Update `shop/urls.py` (Add Order History URL)
+
+Now, add a URL pattern for the order history page.
+
+Please **add** the following path to your `shop/urls.py` file, within the `urlpatterns` list:
+
+```python
+# shop/urls.py
+# ... (existing imports and paths) ...
+
+app_name = 'shop'
+
+urlpatterns = [
+    # ... (existing paths like product_list, product_detail) ...
+    path('orders/', views.order_history, name='order_history'),
+]
+```
+
+### 1.6. Create a New Template `shop/templates/shop/order_history.html`
+
+Create a new HTML file to display the user's order history.
+
+Create a file named `order_history.html` inside `shop/templates/shop/` and paste the following code:
+
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Order History - My Shop</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8f8f8; }
+        .btn-primary { background: linear-gradient(to right, #6B46C1, #8B5CF6); transition: background 0.3s ease-in-out; }
+        .btn-primary:hover { background: linear-gradient(to right, #8B5CF6, #6B46C1); }
+        .scroll-to-top {
+            position: fixed; bottom: 20px; right: 20px; background-color: #8B5CF6; color: white; border-radius: 50%;
+            padding: 10px 15px; font-size: 1.5rem; display: none; cursor: pointer; z-index: 1000; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s;
+        }
+        .scroll-to-top:hover { background-color: #6B46C1; }
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px; /* full rounded */
+            font-size: 0.875rem; /* text-sm */
+            font-weight: 600; /* font-semibold */
+            text-transform: uppercase;
+        }
+        .status-Pending { background-color: #fef9c3; color: #854d09; } /* yellow-100, yellow-800 */
+        .status-Processing { background-color: #bfdbfe; color: #1e40af; } /* blue-200, blue-800 */
+        .status-Shipped { background-color: #d1fae5; color: #065f46; } /* green-100, green-800 */
+        .status-Delivered { background-color: #a7f3d0; color: #065f46; } /* green-200, green-800 */
+        .status-Cancelled { background-color: #fee2e2; color: #991b1b; } /* red-100, red-800 */
+
+        /* Chatbot styles (copied from product_list.html) */
+        .chatbot-container {
+            position: fixed; bottom: 90px; right: 20px; width: 320px; height: 400px; background-color: white;
+            border-radius: 1rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); display: none; flex-direction: column;
+            overflow: hidden; z-index: 1001; border: 1px solid #ddd;
+        }
+        .chatbot-header {
+            background: linear-gradient(to right, #6B46C1, #8B5CF6); color: white; padding: 1rem; display: flex;
+            justify-content: space-between; align-items: center; border-top-left-radius: 1rem; border-top-right-radius: 1rem;
+        }
+        .chatbot-messages { flex-grow: 1; padding: 1rem; overflow-y: auto; background-color: #f2f2f2; }
+        .chatbot-quick-replies { padding: 0.75rem 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; border-top: 1px solid #eee; background-color: #fff; }
+        .quick-reply-btn {
+            background-color: #e0f2fe; color: #1e40af; padding: 0.5rem 0.75rem; border-radius: 0.5rem;
+            cursor: pointer; font-size: 0.875rem; transition: background-color 0.2s, transform 0.1s;
+        }
+        .quick-reply-btn:hover { background-color: #bfdbfe; transform: translateY(-1px); }
+        .chatbot-input-container { padding: 1rem; border-top: 1px solid #eee; display: flex; gap: 0.5rem; }
+        .chatbot-input { flex-grow: 1; padding: 0.75rem; border: 1px solid #ccc; border-radius: 0.5rem; outline: none; }
+        .chatbot-send-btn { background-color: #8B5CF6; color: white; padding: 0.75rem 1rem; border-radius: 0.5rem; cursor: pointer; transition: background-color 0.3s; }
+        .chatbot-send-btn:hover { background-color: #6B46C1; }
+        .chatbot-toggle-btn {
+            position: fixed; bottom: 20px; right: 20px; background-color: #8B5CF6; color: white; border-radius: 50%;
+            padding: 15px; font-size: 2rem; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 1002; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s, background-color 0.3s;
+        }
+        .chatbot-toggle-btn:hover { transform: scale(1.05); background-color: #6B46C1; }
+        .chat-message { margin-bottom: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.75rem; max-width: 80%; word-wrap: break-word; }
+        .chat-message.user { background-color: #e0f2fe; align-self: flex-end; margin-left: auto; }
+        .chat-message.bot { background-color: #e6e6e6; align-self: flex-start; margin-right: auto; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <!-- Header/Navigation Bar - Copied from product_list.html -->
+    <header class="bg-gradient-to-r from-purple-700 to-indigo-700 text-white shadow-lg py-4">
+        <div class="container mx-auto flex flex-wrap justify-between items-center px-4 md:px-6">
+            <a href="/" class="text-3xl font-bold flex items-center rounded-lg p-2 hover:bg-white hover:bg-opacity-20 transition duration-300 z-20">
+                My Shop
+            </a>
+            <div class="block lg:hidden order-2 z-20">
+                <button id="menu-toggle" class="text-white focus:outline-none">
+                    <i class="fas fa-bars text-3xl"></i>
+                </button>
+            </div>
+            <div class="header-search-container flex-grow order-3 lg:order-2 flex justify-center lg:justify-start w-full lg:w-auto mt-4 lg:mt-0 lg:ml-8">
+                <div class="relative w-full max-w-xl">
+                    <input type="text" placeholder="Search products..." class="w-full py-2 pl-4 pr-10 rounded-full text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-300">
+                    <button class="absolute right-0 top-0 mt-2 mr-3 text-gray-600">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+            <ul id="nav-icons" class="hidden lg:flex flex-col lg:flex-row lg:space-x-4 mt-4 lg:mt-0 items-center order-4 lg:order-3">
+                <li><a href="#" class="flex items-center justify-center h-10 w-10 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300" aria-label="Wishlist"><i class="fas fa-heart text-xl"></i></a></li>
+                <li><a href="#" class="flex items-center justify-center h-10 w-10 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300" aria-label="Cart"><i class="fas fa-shopping-cart text-xl"></i></a></li>
+                <li><a href="{% url 'shop:order_history' %}" class="flex items-center space-x-2 py-2 px-4 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300"><i class="fas fa-truck"></i><span>Orders</span></a></li>
+                <li><a href="#" class="flex items-center space-x-2 py-2 px-4 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300"><i class="fas fa-user-circle"></i><span>Account</span></a></li>
+            </ul>
+            <ul id="nav-menu-mobile" class="hidden lg:hidden flex-col w-full mt-4 space-y-2 order-5">
+                <li><a href="#" class="flex items-center space-x-2 py-2 px-4 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300"><i class="fas fa-heart"></i><span>Wishlist</span></a></li>
+                <li><a href="#" class="flex items-center space-x-2 py-2 px-4 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300"><i class="fas fa-shopping-cart"></i><span>Cart</span></a></li>
+                <li><a href="{% url 'shop:order_history' %}" class="flex items-center space-x-2 py-2 px-4 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300"><i class="fas fa-truck"></i><span>Orders</span></a></li>
+                <li><a href="#" class="flex items-center space-x-2 py-2 px-4 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300"><i class="fas fa-user-circle"></i><span>Account</span></a></li>
+            </ul>
+        </div>
+    </header>
+
+    <main class="flex-grow py-8 md:py-16 bg-gray-100">
+        <div class="container mx-auto px-4 md:px-6">
+            <h1 class="text-4xl font-bold text-gray-800 mb-8 text-center">My Orders</h1>
+
+            {% if orders %}
+                <div class="space-y-6">
+                    {% for order in orders %}
+                        <div class="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 pb-4 border-b border-gray-200">
+                                <div>
+                                    <h2 class="text-2xl font-semibold text-gray-800">Order #{{ order.id }}</h2>
+                                    <p class="text-gray-600 text-sm">Placed on {{ order.created|date:"F d, Y, P" }}</p>
+                                </div>
+                                <div class="mt-3 md:mt-0">
+                                    <span class="status-badge status-{{ order.status }}">{{ order.status }}</span>
+                                    {% if order.paid %}
+                                        <span class="status-badge bg-green-100 text-green-800 ml-2">Paid</span>
+                                    {% else %}
+                                        <span class="status-badge bg-red-100 text-red-800 ml-2">Unpaid</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <h3 class="text-lg font-semibold text-gray-700 mb-2">Order Details:</h3>
+                                <ul class="space-y-2">
+                                    {% for item in order.items.all %}
+                                        <li class="flex items-center space-x-4">
+                                            <img src="{% if item.product.image %}{{ item.product.image.url }}{% else %}https://placehold.co/80x80/e0e0e0/000000?text=No+Image{% endif %}" alt="{{ item.product.name }}" class="w-16 h-16 object-cover rounded-md shadow-sm">
+                                            <div class="flex-grow">
+                                                <p class="font-medium text-gray-800">{{ item.product.name }}</p>
+                                                <p class="text-gray-600 text-sm">Quantity: {{ item.quantity }} x &#x09F3;{{ item.price }}</p>
+                                            </div>
+                                            <span class="font-semibold text-gray-800">&#x09F3;{{ item.get_cost }}</span>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+
+                            <div class="border-t border-gray-200 pt-4 flex justify-between items-center">
+                                <span class="text-xl font-bold text-gray-800">Total: &#x09F3;{{ order.get_total_cost }}</span>
+                                <a href="#" class="text-purple-600 hover:underline text-md font-medium">View Order Details <i class="fas fa-chevron-right ml-1 text-sm"></i></a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="bg-white rounded-xl shadow-md p-8 text-center">
+                    <i class="fas fa-box-open text-6xl text-gray-400 mb-6"></i>
+                    <p class="text-xl text-gray-700 mb-4">You haven't placed any orders yet.</p>
+                    <p class="text-gray-500 mb-6">Start shopping now to see your order history here!</p>
+                    <a href="{% url 'shop:product_list' %}" class="btn-primary text-white py-3 px-8 rounded-full font-semibold shadow-lg hover:scale-105 transform transition-all duration-300">
+                        Shop Now <i class="fas fa-shopping-bag ml-2"></i>
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </main>
+
+    <!-- Footer, Scroll to Top, Chatbot (Copied from product_list.html) -->
+    <footer class="bg-gray-800 text-gray-300 py-12">
+        <div class="container mx-auto px-4 md:px-6 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            <div><h3 class="text-xl font-semibold text-white mb-4">My Shop</h3><p class="text-sm leading-relaxed">Dedicated to providing a wide range of authentic religious products to enhance your spiritual journey.</p></div>
+            <div><h3 class="text-xl font-semibold text-white mb-4">Quick Links</h3><ul class="space-y-2"><li><a href="#" class="text-gray-400 hover:text-white transition duration-200">Shop All</a></li><li><a href="#" class="text-gray-400 hover:text-white transition duration-200">Categories</a></li><li><a href="#" class="text-gray-400 hover:text-white transition duration-200">FAQs</a></li><li><a href="#" class="text-gray-400 hover:text-white transition duration-200">Privacy Policy</a></li><li><a href="#" class="text-gray-400 hover:text-white transition duration-200">Terms of Service</a></li></ul></div>
+            <div><h3 class="text-xl font-semibold text-white mb-4">Contact Us</h3><p class="text-sm">Email: <a href="mailto:info@myshop.co.bd" class="text-gray-400 hover:text-white">info@myshop.co.bd</a></p><p class="text-sm">Phone: <a href="tel:+880XXXXXXXXXX" class="text-gray-400 hover:text-white">+880 XXXXXXXXXX</a></p><div class="flex space-x-4 mt-4"><a href="#" class="text-gray-400 hover:text-white text-2xl"><i class="fab fa-facebook-f"></i></a><a href="#" class="text-gray-400 hover:text-white text-2xl"><i class="fab fa-twitter"></i></a><a href="#" class="text-gray-400 hover:text-white text-2xl"><i class="fab fa-instagram"></i></a><a href="#" class="text-gray-400 hover:text-white text-2xl"><i class="fab fa-pinterest"></i></a></div></div>
+            <div><h3 class="text-xl font-semibold text-white mb-4">Payments & Shipping</h3><p class="text-sm">We accept local payment methods in BDT, including mobile banking, alongside Visa and MasterCard.</p><p class="text-sm mt-2">Products are sourced locally within Bangladesh and shipped reliably nationwide.</p><p class="text-sm mt-1">Enjoy fast and convenient delivery right to your doorstep.</p><div class="flex flex-wrap gap-2 mt-4"><img src="https://placehold.co/60x30/FFFFFF/000000?text=Bkash" alt="Bkash" class="h-8 rounded-md shadow-sm"><img src="https://placehold.co/60x30/FFFFFF/000000?text=Nagad" alt="Nagad" class="h-8 rounded-md shadow-sm"><img src="https://placehold.co/60x30/FFFFFF/000000?text=Visa" alt="Visa" class="h-8 rounded-md shadow-sm"><img src="https://placehold.co/60x30/FFFFFF/000000?text=Mastercard" alt="Mastercard" class="h-8 rounded-md shadow-sm"></div></div>
+        </div>
+        <div class="border-t border-gray-700 mt-8 pt-8 text-center"><p class="text-sm text-gray-500">&copy; 2025 My Shop. All rights reserved.</p></div>
+    </footer>
+    <div class="scroll-to-top" id="scrollToTopBtn"><i class="fas fa-arrow-up"></i></div>
+    <div class="chatbot-toggle-btn" id="chatbotToggleBtn"><i class="fas fa-comments"></i></div>
+    <div class="chatbot-container" id="chatbotContainer">
+        <div class="chatbot-header"><h3 class="text-lg font-semibold">My Shop Assistant</h3><button id="closeChatbotBtn" class="text-white text-xl focus:outline-none">&times;</button></div>
+        <div class="chatbot-messages" id="chatbotMessages"><div class="chat-message bot">Hello! How can I assist you today?</div></div>
+        <div class="chatbot-quick-replies" id="chatbotQuickReplies">
+            <button class="quick-reply-btn" data-reply="What are your shipping options?">Shipping Options</button>
+            <button class="quick-reply-btn" data-reply="How can I track my order?">Track Order</button>
+            <button class="quick-reply-btn" data-reply="What is your return policy?">Return Policy</button>
+            <button class="quick-reply-btn" data-reply="Can you recommend a product?">Product Recommendation</button>
+        </div>
+        <div class="chatbot-input-container"><input type="text" id="chatbotInput" class="chatbot-input" placeholder="Type your message..."><button id="chatbotSendBtn" class="chatbot-send-btn">Send</button></div>
+    </div>
+    <script>
+        // JavaScript for mobile menu toggle
+        const menuToggle = document.getElementById('menu-toggle');
+        const navMenuMobile = document.getElementById('nav-menu-mobile');
+        menuToggle.addEventListener('click', () => { navMenuMobile.classList.toggle('hidden'); navMenuMobile.classList.toggle('flex'); navMenuMobile.classList.toggle('flex-col'); });
+
+        // JavaScript for scroll to top button
+        const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+        window.addEventListener('scroll', () => { if (window.scrollY > 300) { scrollToTopBtn.style.display = 'block'; } else { scrollToTopBtn.style.display = 'none'; } });
+        scrollToTopBtn.addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
+        // Slideshow JavaScript - UPDATED FOR DYNAMIC CONTENT AND ERROR FIX
+        let slideIndex = 1;
+        let slideTimer;
+
+        // Function to show slides
+        function showSlides(n) {
+            let i;
+            let slides = document.getElementsByClassName("mySlides");
+            let dots = document.getElementsByClassName("dot");
+
+            // Added check to ensure slides and dots exist and are not empty
+            if (slides.length === 0) {
+                clearTimeout(slideTimer);
+                // Optionally hide navigation if no slides are present
+                const prevButton = document.querySelector('.prev');
+                const nextButton = document.querySelector('.next');
+                if (prevButton) prevButton.style.display = 'none';
+                if (nextButton) nextButton.style.display = 'none';
+                return;
+            }
+
+            // Ensure dots array is populated before trying to access its elements
+            // This happens if there's only one slide, so no dots are rendered
+            if (dots.length === 0 && slides.length === 1) {
+                 // No dots needed for a single slide, but we still want to show the slide
+                 slides[0].style.display = "block";
+                 return; // Exit if only one slide and no dots
+            } else if (dots.length === 0 && slides.length > 1) {
+                // This indicates an issue in the Django template not rendering dots
+                console.error("Slides exist but no dots are rendered. Check your Django template loop for slideshow-dots.");
+                clearTimeout(slideTimer);
+                return;
+            }
+
+
+            if (n > slides.length) { slideIndex = 1 }
+            if (n < 1) { slideIndex = slides.length }
+
+            for (i = 0; i < slides.length; i++) {
+                slides[i].style.display = "none";
+            }
+            for (i = 0; i < dots.length; i++) {
+                dots[i].className = dots[i].className.replace(" active-dot", "");
+            }
+
+            slides[slideIndex - 1].style.display = "block";
+            dots[slideIndex - 1].className += " active-dot";
+
+            clearTimeout(slideTimer);
+            slideTimer = setTimeout(() => plusSlides(1), 5000); // Change slide every 5 seconds
+        }
+
+        // Next/previous controls
+        function plusSlides(n) {
+            showSlides(slideIndex += n);
+        }
+
+        // Thumbnail image controls
+        function currentSlide(n) {
+            showSlides(slideIndex = n);
+        }
+
+        // Initialize slideshow on window load
+        window.addEventListener('load', () => {
+            showSlides(slideIndex);
+        });
+
+        // Chatbot JavaScript
+        const chatbotToggleBtn = document.getElementById('chatbotToggleBtn');
+        const chatbotContainer = document.getElementById('chatbotContainer');
+        const closeChatbotBtn = document.getElementById('closeChatbotBtn');
+        const chatbotInput = document.getElementById('chatbotInput');
+        const chatbotSendBtn = document.getElementById('chatbotSendBtn');
+        const chatbotMessages = document.getElementById('chatbotMessages');
+        const chatbotQuickReplies = document.getElementById('chatbotQuickReplies');
+
+        chatbotToggleBtn.addEventListener('click', () => { chatbotContainer.style.display = chatbotContainer.style.display === 'flex' ? 'none' : 'flex'; });
+        closeChatbotBtn.addEventListener('click', () => { chatbotContainer.style.display = 'none'; });
+
+        // Function to display a message in the chat
+        function displayChatMessage(message, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('chat-message', sender);
+            messageDiv.textContent = message;
+            chatbotMessages.appendChild(messageDiv);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        }
+
+        // --- NEW CHATBOT LOGIC WITH GEMINI API INTEGRATION (Bengali) ---
+        async function sendChatMessageToGemini(userMessage) {
+            displayChatMessage(userMessage, 'user');
+            chatbotInput.value = ''; // Clear input immediately
+
+            let chatHistory = [];
+            chatHistory.push({ role: "user", parts: [{ text: userMessage }] });
+
+            const payload = { contents: chatHistory };
+            const apiKey = ""; // Canvas will provide this automatically for gemini-2.5-flash-preview-05-20
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            // Add loading indicator
+            const loadingDiv = document.createElement('div');
+            loadingDiv.classList.add('chat-message', 'bot', 'loading-indicator');
+            loadingDiv.textContent = 'Typing...';
+            chatbotMessages.appendChild(loadingDiv);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+
+
+            let retries = 0;
+            const maxRetries = 5;
+            const baseDelay = 1000; // 1 second
+
+            while (retries < maxRetries) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.status === 429) { // Too Many Requests
+                        const delay = baseDelay * Math.pow(2, retries) + Math.random() * 500; // Exponential backoff with jitter
+                        retries++;
+                        await new Promise(res => setTimeout(res, delay));
+                        continue; // Retry the request
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+
+                    // Remove loading indicator
+                    chatbotMessages.removeChild(loadingDiv);
+
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const text = result.candidates[0].content.parts[0].text;
+                        displayChatMessage(text, 'bot'); // Display the LLM response
+                    } else {
+                        displayChatMessage("Sorry, I couldn't get a response from the AI. Please try again.", 'bot');
+                    }
+                    break; // Exit loop on success
+                } catch (error) {
+                    // Remove loading indicator on error
+                    if (chatbotMessages.contains(loadingDiv)) {
+                       chatbotMessages.removeChild(loadingDiv);
+                    }
+                    console.error('Error calling Gemini API:', error);
+                    if (retries < maxRetries - 1) { // Only retry if not on the last attempt
+                        const delay = baseDelay * Math.pow(2, retries) + Math.random() * 500;
+                        retries++;
+                        await new Promise(res => setTimeout(res, delay));
+                    } else {
+                        displayChatMessage("দুঃখিত, আমি আপনার অনুরোধটি প্রক্রিয়া করতে পারিনি। পরে আবার চেষ্টা করুন। (Sorry, I couldn't process your request. Please try again later.)", 'bot');
+                    }
+                }
+            }
+        }
+
+        chatbotSendBtn.addEventListener('click', () => sendChatMessageToGemini(chatbotInput.value));
+        chatbotInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { sendChatMessageToGemini(chatbotInput.value); } });
+        chatbotQuickReplies.querySelectorAll('.quick-reply-btn').forEach(button => {
+            button.addEventListener('click', () => { sendChatMessageToGemini(button.dataset.reply); });
+        });
+        // --- END NEW CHATBOT LOGIC ---
+    </script>
+</body>
+</html>
+```
+
+---
+
+The provided Canvas (`product-list-template-corrected-empty`) now includes the following:
+
+1.  **Order Tracking Link:** A link to "Orders" has been added to both the desktop and mobile navigation sections, which will lead to the new `order_history` page.
+2.  **Advanced Chatbot Logic:** The JavaScript section for the chatbot has been significantly updated to integrate with the Gemini API. This allows it to send user messages to the AI and receive dynamic responses. I've also added basic **error handling with exponential backoff** for the API calls.
+    * **Bengali Responses:** The prompt to the LLM will implicitly handle Bengali if the user inputs in Bengali or asks for a response in Bengali. The LLM (`gemini-2.5-flash-preview-05-20`) is capable of multi-lingual responses. The fallback error message is also in Bengali.
+    * **`Loading` indicator**: The chatbot now shows "Typing..." while waiting for the AI response.
+
+---
+
+### Next Steps for Implementation:
+
+1.  **Save the updated `product_list.html` file.**
+2.  **Restart your Django development server:**
+    ```bash
+    python manage.py runserver
+    ```
+3.  **Test Order History:**
+    * Log in to your admin dashboard (`http://127.0.0.1:8000/admin/`).
+    * Go to **Orders** and create a new order. Make sure to select your superuser account in the "User" field, and add some `Order Items` for products.
+    * Log out of the admin.
+    * Create a regular user account (you'll need a registration/login system for the frontend, or you can temporarily mark a `CustomUser` as `is_staff = False` in the admin). For testing, you can use the superuser account, but remember `order_history` requires a logged-in user.
+    * Navigate to `http://127.0.0.1:8000/orders/`. If you are logged in, you should see the orders associated with your user.
+4.  **Test Advanced Chatbot:**
+    * Go to your shop's homepage (`http://127.0.0.1:8000/`).
+    * Click the **chatbot icon** on the bottom right.
+    * Type a question (e.g., "What are your shipping options?", "Can you tell me about the Quran?").
+    * Try typing in Bengali (e.g., "আপনার পণ্যগুলি কি কি?") and see how it responds.
+
+---
+
+## 2. Displaying User Count (Admin Dashboard) 📊
+
+To see how many users have signed up, the simplest way is to directly query your `CustomUser` model. You can do this in the Django shell or integrate it into your admin.
+
+### 2.1. Get User Count in Django Shell
+
+You can quickly get the count of all `CustomUser` objects using the Django shell:
+
+1.  Open your terminal and navigate to your project root.
+2.  Activate your virtual environment.
+3.  Run the Django shell:
+    ```bash
+    python manage.py shell
+    ```
+4.  Inside the shell, run these commands:
+    ```python
+    from shop.models import CustomUser
+    total_users = CustomUser.objects.count()
+    print(f"Total registered users: {total_users}")
+    exit() # To exit the shell
+    ```
+
+### 2.2. Display in Admin Dashboard (Advanced - Requires Custom Admin View)
+
+While Jazzmin provides a good overview, displaying a live user count on the main dashboard homepage directly requires a custom admin view or a Jazzmin custom dashboard component, which is a bit more involved.
+
+For now, the easiest way to see the count is in the **Django Admin itself**:
+* Go to `http://127.0.0.1:8000/admin/` and navigate to **Users** under the `SHOP` section (or `Authentication and Authorization`). The page will show you the total count of users at the top right of the list.
+
+If you specifically want a dedicated counter on the Jazzmin dashboard homepage, that's a more advanced customization that we can explore later if you wish.
+
+---
+
+## 3. Wishlist Page for Users ❤️
+
+Implementing a wishlist involves creating models to store which user has wishlisted which product, along with views and a template to manage and display it.
+
+### 3.1. Update `shop/models.py` (Add Wishlist Models)
+
+We'll add `Wishlist` and `WishlistItem` models. `Wishlist` will represent a user's collection, and `WishlistItem` will link products to that wishlist.
+
+Please **add** the following code to your `shop/models.py` file, ideally below your `OrderItem` model.
+
+```python
+# shop/models.py
+# ... (existing imports and models: CustomUser, Category, Product, Slide, Order, OrderItem) ...
+
+# Wishlist Model
+class Wishlist(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='wishlist')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Wishlist for {self.user.username}"
+
+# Wishlist Item Model
+class WishlistItem(models.Model):
+    wishlist = models.ForeignKey(Wishlist, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('wishlist', 'product') # A product can only be in a wishlist once
+        ordering = ['-added_at']
+
+    def __str__(self):
+        return f"{self.product.name} in {self.wishlist.user.username}'s wishlist"
+```
+
+### 3.2. Update `shop/admin.py` (Register Wishlist Models)
+
+Registering the Wishlist models allows you to see and manage them from the admin dashboard.
+
+Please **add** the following code to your `shop/admin.py` file:
+
+```python
+# shop/admin.py
+# ... (existing imports and admin registrations) ...
+
+# Register Wishlist and WishlistItem
+@admin.register(Wishlist)
+class WishlistAdmin(admin.ModelAdmin):
+    list_display = ['user', 'created_at']
+    search_fields = ['user__username']
+
+@admin.register(WishlistItem)
+class WishlistItemAdmin(admin.ModelAdmin):
+    list_display = ['wishlist', 'product', 'added_at']
+    list_filter = ['added_at']
+    search_fields = ['wishlist__user__username', 'product__name']
+```
+
+### 3.3. Make New Migrations
+
+After adding the new models, you must create and apply new database migrations.
+
+In your terminal (with your virtual environment active):
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+### 3.4. Update `shop/views.py` (Add Wishlist Views)
+
+We'll add views to display a user's wishlist, and potentially to add/remove items (though the add/remove actions would usually be triggered by AJAX calls from the frontend, we'll set up the view for the page itself).
+
+Please **add** the following code to your `shop/views.py` file:
+
+```python
+# shop/views.py
+# ... (existing imports and views: product_list, product_detail, order_history) ...
+
+from django.http import JsonResponse # Potentially useful for AJAX later
+from django.views.decorators.http import require_POST # For add/remove actions if implemented via forms
+
+@login_required
+def wishlist_view(request):
+    wishlist, created = Wishlist.objects.get_or_create(user=request.user)
+    return render(request, 'shop/wishlist.html', {'wishlist': wishlist})
+
+# Example for adding to wishlist (simplified for now, would typically be an AJAX endpoint)
+@login_required
+@require_POST # Only allow POST requests for this action
+def wishlist_add(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    wishlist, created = Wishlist.objects.get_or_create(user=request.user)
+    wishlist_item, item_created = WishlistItem.objects.get_or_create(wishlist=wishlist, product=product)
+    if item_created:
+        # Item successfully added
+        pass # You might add a success message here
+    else:
+        # Item was already in wishlist
+        pass # You might add an info message here
+    return JsonResponse({'status': 'success', 'message': 'Product added to wishlist'}) # Or redirect, depending on frontend
+
+# Example for removing from wishlist (simplified for now)
+@login_required
+@require_POST # Only allow POST requests for this action
+def wishlist_remove(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    wishlist = get_object_or_404(Wishlist, user=request.user)
+    WishlistItem.objects.filter(wishlist=wishlist, product=product).delete()
+    return JsonResponse({'status': 'success', 'message': 'Product removed from wishlist'}) # Or redirect
+```
+
+### 3.5. Update `shop/urls.py` (Add Wishlist URLs)
+
+Add URL patterns for the wishlist page and the add/remove actions.
+
+Please **add** the following paths to your `shop/urls.py` file, within the `urlpatterns` list:
+
+```python
+# shop/urls.py
+# ... (existing imports and paths) ...
+
+app_name = 'shop'
+
+urlpatterns = [
+    # ... (existing paths like product_list, product_detail, order_history) ...
+    path('wishlist/', views.wishlist_view, name='wishlist_view'),
+    path('wishlist/add/<int:product_id>/', views.wishlist_add, name='wishlist_add'),
+    path('wishlist/remove/<int:product_id>/', views.wishlist_remove, name='wishlist_remove'),
+]
+```
+
+### 3.6. Create a New Template `shop/templates/shop/wishlist.html`
+
+Create a new HTML file to display the user's wishlist.
+
+Create a file named `wishlist.html` inside `shop/templates/shop/` and paste the following code:
+
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Wishlist - My Shop</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8f8f8; }
+        .btn-primary { background: linear-gradient(to right, #6B46C1, #8B5CF6); transition: background 0.3s ease-in-out; }
+        .btn-primary:hover { background: linear-gradient(to right, #8B5CF6, #6B46C1); }
+        .scroll-to-top {
+            position: fixed; bottom: 20px; right: 20px; background-color: #8B5CF6; color: white; border-radius: 50%;
+            padding: 10px 15px; font-size: 1.5rem; display: none; cursor: pointer; z-index: 1000; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s;
+        }
+        .scroll-to-top:hover { background-color: #6B46C1; }
+
+        /* Chatbot styles (copied from product_list.html) */
+        .chatbot-container {
+            position: fixed; bottom: 90px; right: 20px; width: 320px; height: 400px; background-color: white;
+            border-radius: 1rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); display: none; flex-direction: column;
+            overflow: hidden; z-index: 1001; border: 1px solid #ddd;
+        }
+        .chatbot-header {
+            background: linear-gradient(to right, #6B46C1, #8B5CF6); color: white; padding: 1rem; display: flex;
+            justify-content: space-between; align-items: center; border-top-left-radius: 1rem; border-top-right-radius: 1rem;
+        }
+        .chatbot-messages { flex-grow: 1; padding: 1rem; overflow-y: auto; background-color: #f2f2f2; }
+        .chatbot-quick-replies { padding: 0.75rem 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; border-top: 1px solid #eee; background-color: #fff; }
+        .quick-reply-btn {
+            background-color: #e0f2fe; color: #1e40af; padding: 0.5rem 0.75rem; border-radius: 0.5rem;
+            cursor: pointer; font-size: 0.875rem; transition: background-color 0.2s, transform 0.1s;
+        }
+        .quick-reply-btn:hover { background-color: #bfdbfe; transform: translateY(-1px); }
+        .chatbot-input-container { padding: 1rem; border-top: 1px solid #eee; display: flex; gap: 0.5rem; }
+        .chatbot-input { flex-grow: 1; padding: 0.75rem; border: 1px solid #ccc; border-radius: 0.5rem; outline: none; }
+        .chatbot-send-btn { background-color: #8B5CF6; color: white; padding: 0.75rem 1rem; border-radius: 0.5rem; cursor: pointer; transition: background-color 0.3s; }
+        .chatbot-send-btn:hover { background-color: #6B46C1; }
+        .chatbot-toggle-btn {
+            position: fixed; bottom: 20px; right: 20px; background-color: #8B5CF6; color: white; border-radius: 50%;
+            padding: 15px; font-size: 2rem; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 1002; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s, background-color 0.3s;
+        }
+        .chatbot-toggle-btn:hover { transform: scale(1.05); background-color: #6B46C1; }
+        .chat-message { margin-bottom: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.75rem; max-width: 80%; word-wrap: break-word; }
+        .chat-message.user { background-color: #e0f2fe; align-self: flex-end; margin-left: auto; }
+        .chat-message.bot { background-color: #e6e6e6; align-self: flex-start; margin-right: auto; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <!-- Header/Navigation Bar - Copied from product_list.html -->
+    <header class="bg-gradient-to-r from-purple-700 to-indigo-700 text-white shadow-lg py-4">
+        <div class="container mx-auto flex flex-wrap justify-between items-center px-4 md:px-6">
+            <a href="/" class="text-3xl font-bold flex items-center rounded-lg p-2 hover:bg-white hover:bg-opacity-20 transition duration-300 z-20">
+                My Shop
+            </a>
+            <div class="block lg:hidden order-2 z-20">
+                <button id="menu-toggle" class="text-white focus:outline-none">
+                    <i class="fas fa-bars text-3xl"></i>
+                </button>
+            </div>
+            <div class="header-search-container flex-grow order-3 lg:order-2 flex justify-center lg:justify-start w-full lg:w-auto mt-4 lg:mt-0 lg:ml-8">
+                <div class="relative w-full max-w-xl">
+                    <input type="text" placeholder="Search products..." class="w-full py-2 pl-4 pr-10 rounded-full text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-300">
+                    <button class="absolute right-0 top-0 mt-2 mr-3 text-gray-600">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+            <ul id="nav-icons" class="hidden lg:flex flex-col lg:flex-row lg:space-x-4 mt-4 lg:mt-0 items-center order-4 lg:order-3">
+                <li><a href="{% url 'shop:wishlist_view' %}" class="flex items-center justify-center h-10 w-10 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300" aria-label="Wishlist"><i class="fas fa-heart text-xl"></i></a></li>
+                <li><a href="#" class="flex items-center justify-center h-10 w-10 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300" aria-label="Cart"><i class="fas fa-shopping-cart text-xl"></i></a></li>
+                <li><a href="{% url 'shop:order_history' %}" class="flex items-center space-x-2 py-2 px-4 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300"><i class="fas fa-truck"></i><span>Orders</span></a></li>
+                <li><a href="#" class="flex items-center space-x-2 py-2 px-4 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300"><i class="fas fa-user-circle"></i><span>Account</span></a></li>
+            </ul>
+            <ul id="nav-menu-mobile" class="hidden lg:hidden flex-col w-full mt-4 space-y-2 order-5">
+                <li><a href="{% url 'shop:wishlist_view' %}" class="flex items-center space-x-2 py-2 px-4 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300"><i class="fas fa-heart"></i><span>Wishlist</span></a></li>
+                <li><a href="#" class="flex items-center space-x-2 py-2 px-4 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300"><i class="fas fa-shopping-cart"></i><span>Cart</span></a></li>
+                <li><a href="{% url 'shop:order_history' %}" class="flex items-center space-x-2 py-2 px-4 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300"><i class="fas fa-truck"></i><span>Orders</span></a></li>
+                <li><a href="#" class="flex items-center space-x-2 py-2 px-4 bg-white text-purple-700 rounded-full font-semibold shadow-md hover:bg-gray-100 transition duration-300"><i class="fas fa-user-circle"></i><span>Account</span></a></li>
+            </ul>
+        </div>
+    </header>
+
+    <main class="flex-grow py-8 md:py-16 bg-gray-100">
+        <div class="container mx-auto px-4 md:px-6">
+            <h1 class="text-4xl font-bold text-gray-800 mb-8 text-center">My Wishlist</h1>
+
+            {% if wishlist.items.all %}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% for item in wishlist.items.all %}
+                        <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 flex flex-col">
+                            <a href="{{ item.product.get_absolute_url }}" class="block">
+                                <img src="{% if item.product.image %}{{ item.product.image.url }}{% else %}https://placehold.co/400x300/e0e0e0/000000?text=No+Image{% endif %}" alt="{{ item.product.name }}" class="w-full h-48 object-cover">
+                            </a>
+                            <div class="p-6 flex-grow flex flex-col justify-between">
+                                <div>
+                                    <h2 class="text-xl font-semibold text-gray-800 mb-2">{{ item.product.name }}</h2>
+                                    <p class="text-gray-600 text-sm mb-4 truncate">{{ item.product.description }}</p>
+                                    <p class="text-2xl font-bold text-purple-700 mb-4">&#x09F3; {{ item.product.price }}</p>
+                                </div>
+                                <div class="mt-auto">
+                                    <form action="{% url 'shop:wishlist_remove' item.product.id %}" method="post" class="w-full">
+                                        {% csrf_token %}
+                                        <button type="submit" class="w-full bg-red-500 text-white py-2 px-4 rounded-full font-semibold hover:bg-red-600 transition duration-300">
+                                            <i class="fas fa-trash-alt mr-2"></i>Remove from Wishlist
+                                        </button>
+                                    </form>
+                                    <button class="btn-primary text-white py-2 px-4 w-full rounded-full font-semibold mt-2 hover:scale-105 transform transition duration-300">
+                                        <i class="fas fa-cart-plus mr-2"></i>Add to Cart
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="bg-white rounded-xl shadow-md p-8 text-center">
+                    <i class="fas fa-heart-broken text-6xl text-gray-400 mb-6"></i>
+                    <p class="text-xl text-gray-700 mb-4">Your wishlist is empty!</p>
+                    <p class="text-gray-500 mb-6">Start adding your favorite products to save them for later.</p>
+                    <a href="{% url 'shop:product_list' %}" class="btn-primary text-white py-3 px-8 rounded-full font-semibold shadow-lg hover:scale-105 transform transition-all duration-300">
+                        Shop Now <i class="fas fa-shopping-bag ml-2"></i>
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </main>
+
+    <!-- Footer, Scroll to Top, Chatbot (Copied from product_list.html) -->
+    <footer class="bg-gray-800 text-gray-300 py-12">
+        <div class="container mx-auto px-4 md:px-6 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            <div><h3 class="text-xl font-semibold text-white mb-4">My Shop</h3><p class="text-sm leading-relaxed">Dedicated to providing a wide range of authentic religious products to enhance your spiritual journey.</p></div>
+            <div><h3 class="text-xl font-semibold text-white mb-4">Quick Links</h3><ul class="space-y-2"><li><a href="#" class="text-gray-400 hover:text-white transition duration-200">Shop All</a></li><li><a href="#" class="text-gray-400 hover:text-white transition duration-200">Categories</a></li><li><a href="#" class="text-gray-400 hover:text-white transition duration-200">FAQs</a></li><li><a href="#" class="text-gray-400 hover:text-white transition duration-200">Privacy Policy</a></li><li><a href="#" class="text-gray-400 hover:text-white transition duration-200">Terms of Service</a></li></ul></div>
+            <div><h3 class="text-xl font-semibold text-white mb-4">Contact Us</h3><p class="text-sm">Email: <a href="mailto:info@myshop.co.bd" class="text-gray-400 hover:text-white">info@myshop.co.bd</a></p><p class="text-sm">Phone: <a href="tel:+880XXXXXXXXXX" class="text-gray-400 hover:text-white">+880 XXXXXXXXXX</a></p><div class="flex space-x-4 mt-4"><a href="#" class="text-gray-400 hover:text-white text-2xl"><i class="fab fa-facebook-f"></i></a><a href="#" class="text-gray-400 hover:text-white text-2xl"><i class="fab fa-twitter"></i></a><a href="#" class="text-gray-400 hover:text-white text-2xl"><i class="fab fa-instagram"></i></a><a href="#" class="text-gray-400 hover:text-white text-2xl"><i class="fab fa-pinterest"></i></a></div></div>
+            <div><h3 class="text-xl font-semibold text-white mb-4">Payments & Shipping</h3><p class="text-sm">We accept local payment methods in BDT, including mobile banking, alongside Visa and MasterCard.</p><p class="text-sm mt-2">Products are sourced locally within Bangladesh and shipped reliably nationwide.</p><p class="text-sm mt-1">Enjoy fast and convenient delivery right to your doorstep.</p><div class="flex flex-wrap gap-2 mt-4"><img src="https://placehold.co/60x30/FFFFFF/000000?text=Bkash" alt="Bkash" class="h-8 rounded-md shadow-sm"><img src="https://placehold.co/60x30/FFFFFF/000000?text=Nagad" alt="Nagad" class="h-8 rounded-md shadow-sm"><img src="https://placehold.co/60x30/FFFFFF/000000?text=Visa" alt="Visa" class="h-8 rounded-md shadow-sm"><img src="https://placehold.co/60x30/FFFFFF/000000?text=Mastercard" alt="Mastercard" class="h-8 rounded-md shadow-sm"></div></div>
+        </div>
+        <div class="border-t border-gray-700 mt-8 pt-8 text-center"><p class="text-sm text-gray-500">&copy; 2025 My Shop. All rights reserved.</p></div>
+    </footer>
+    <div class="scroll-to-top" id="scrollToTopBtn"><i class="fas fa-arrow-up"></i></div>
+    <div class="chatbot-toggle-btn" id="chatbotToggleBtn"><i class="fas fa-comments"></i></div>
+    <div class="chatbot-container" id="chatbotContainer">
+        <div class="chatbot-header"><h3 class="text-lg font-semibold">My Shop Assistant</h3><button id="closeChatbotBtn" class="text-white text-xl focus:outline-none">&times;</button></div>
+        <div class="chatbot-messages" id="chatbotMessages"><div class="chat-message bot">Hello! How can I assist you today?</div></div>
+        <div class="chatbot-quick-replies" id="chatbotQuickReplies">
+            <button class="quick-reply-btn" data-reply="What are your shipping options?">Shipping Options</button>
+            <button class="quick-reply-btn" data-reply="How can I track my order?">Track Order</button>
+            <button class="quick-reply-btn" data-reply="What is your return policy?">Return Policy</button>
+            <button class="quick-reply-btn" data-reply="Can you recommend a product?">Product Recommendation</button>
+        </div>
+        <div class="chatbot-input-container"><input type="text" id="chatbotInput" class="chatbot-input" placeholder="Type your message..."><button id="chatbotSendBtn" class="chatbot-send-btn">Send</button></div>
+    </div>
+    <script>
+        // JavaScript for mobile menu toggle
+        const menuToggle = document.getElementById('menu-toggle');
+        const navMenuMobile = document.getElementById('nav-menu-mobile');
+        menuToggle.addEventListener('click', () => { navMenuMobile.classList.toggle('hidden'); navMenuMobile.classList.toggle('flex'); navMenuMobile.classList.toggle('flex-col'); });
+
+        // JavaScript for scroll to top button
+        const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+        window.addEventListener('scroll', () => { if (window.scrollY > 300) { scrollToTopBtn.style.display = 'block'; } else { scrollToTopBtn.style.display = 'none'; } });
+        scrollToTopBtn.addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
+        // Slideshow JavaScript - Copied from product_list.html
+        let slideIndex = 1;
+        let slideTimer;
+
+        function showSlides(n) {
+            let i;
+            let slides = document.getElementsByClassName("mySlides");
+            let dots = document.getElementsByClassName("dot");
+
+            if (slides.length === 0) {
+                clearTimeout(slideTimer);
+                const prevButton = document.querySelector('.prev');
+                const nextButton = document.querySelector('.next');
+                if (prevButton) prevButton.style.display = 'none';
+                if (nextButton) nextButton.style.display = 'none';
+                return;
+            }
+
+            if (dots.length === 0 && slides.length === 1) {
+                 slides[0].style.display = "block";
+                 return;
+            } else if (dots.length === 0 && slides.length > 1) {
+                console.error("Slides exist but no dots are rendered. Check your Django template loop for slideshow-dots.");
+                clearTimeout(slideTimer);
+                return;
+            }
+
+            if (n > slides.length) { slideIndex = 1 }
+            if (n < 1) { slideIndex = slides.length }
+
+            for (i = 0; i < slides.length; i++) {
+                slides[i].style.display = "none";
+            }
+            for (i = 0; i < dots.length; i++) {
+                dots[i].className = dots[i].className.replace(" active-dot", "");
+            }
+
+            slides[slideIndex - 1].style.display = "block";
+            dots[slideIndex - 1].className += " active-dot";
+
+            clearTimeout(slideTimer);
+            slideTimer = setTimeout(() => plusSlides(1), 5000);
+        }
+
+        function plusSlides(n) {
+            showSlides(slideIndex += n);
+        }
+
+        function currentSlide(n) {
+            showSlides(slideIndex = n);
+        }
+
+        window.addEventListener('load', () => {
+            showSlides(slideIndex);
+        });
+
+        // Chatbot JavaScript - Copied from product_list.html
+        const chatbotToggleBtn = document.getElementById('chatbotToggleBtn');
+        const chatbotContainer = document.getElementById('chatbotContainer');
+        const closeChatbotBtn = document.getElementById('closeChatbotBtn');
+        const chatbotInput = document.getElementById('chatbotInput');
+        const chatbotSendBtn = document.getElementById('chatbotSendBtn');
+        const chatbotMessages = document.getElementById('chatbotMessages');
+        const chatbotQuickReplies = document.getElementById('chatbotQuickReplies');
+
+        chatbotToggleBtn.addEventListener('click', () => { chatbotContainer.style.display = chatbotContainer.style.display === 'flex' ? 'none' : 'flex'; });
+        closeChatbotBtn.addEventListener('click', () => { chatbotContainer.style.display = 'none'; });
+
+        function displayChatMessage(message, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('chat-message', sender);
+            messageDiv.textContent = message;
+            chatbotMessages.appendChild(messageDiv);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        }
+
+        async function sendChatMessageToGemini(userMessage) {
+            displayChatMessage(userMessage, 'user');
+            chatbotInput.value = '';
+
+            let chatHistory = [];
+            chatHistory.push({ role: "user", parts: [{ text: userMessage }] });
+
+            const payload = { contents: chatHistory };
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            const loadingDiv = document.createElement('div');
+            loadingDiv.classList.add('chat-message', 'bot', 'loading-indicator');
+            loadingDiv.textContent = 'Typing...';
+            chatbotMessages.appendChild(loadingDiv);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+
+
+            let retries = 0;
+            const maxRetries = 5;
+            const baseDelay = 1000;
+
+            while (retries < maxRetries) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.status === 429) {
+                        const delay = baseDelay * Math.pow(2, retries) + Math.random() * 500;
+                        retries++;
+                        await new Promise(res => setTimeout(res, delay));
+                        continue;
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+
+                    if (chatbotMessages.contains(loadingDiv)) {
+                       chatbotMessages.removeChild(loadingDiv);
+                    }
+
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const text = result.candidates[0].content.parts[0].text;
+                        displayChatMessage(text, 'bot');
+                    } else {
+                        displayChatMessage("Sorry, I couldn't get a response from the AI. Please try again.", 'bot');
+                    }
+                    break;
+                } catch (error) {
+                    if (chatbotMessages.contains(loadingDiv)) {
+                       chatbotMessages.removeChild(loadingDiv);
+                    }
+                    console.error('Error calling Gemini API:', error);
+                    if (retries < maxRetries - 1) {
+                        const delay = baseDelay * Math.pow(2, retries) + Math.random() * 500;
+                        retries++;
+                        await new Promise(res => setTimeout(res, delay));
+                    } else {
+                        displayChatMessage("দুঃখিত, আমি আপনার অনুরোধটি প্রক্রিয়া করতে পারিনি। পরে আবার চেষ্টা করুন। (Sorry, I couldn't process your request. Please try again later.)", 'bot');
+                    }
+                }
+            }
+        }
+
+        chatbotSendBtn.addEventListener('click', () => sendChatMessageToGemini(chatbotInput.value));
+        chatbotInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { sendChatMessageToGemini(chatbotInput.value); } });
+        chatbotQuickReplies.querySelectorAll('.quick-reply-btn').forEach(button => {
+            button.addEventListener('click', () => { sendChatMessageToGemini(button.dataset.reply); });
+        });
+    </script>
+</body>
+</html>
+```
+

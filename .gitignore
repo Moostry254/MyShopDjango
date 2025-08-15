@@ -1,0 +1,30 @@
+# .gitignore
+
+# Python virtual environment
+.venv/
+env/
+venv/
+__pycache__/
+*.pyc
+
+# Django specific
+*.log
+*.sqlite3
+db.sqlite3
+/media/
+/static_cdn/ # If you collect static files here
+/static_root/ # Or here
+
+# IDE related files
+.idea/      # PyCharm
+.vscode/    # VS Code
+*.sublime-project
+*.sublime-workspace
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+*.env
