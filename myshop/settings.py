@@ -14,11 +14,10 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 import os
-import dj_database_url # Import for database configuration
+import dj_database_url  # Import for database configuration
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -28,16 +27,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Fallback to a default for local development (ensure this is NOT used in production)
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-9^!1*a2(x9g$j#y0@)f-o8j!&7z@#j(e^@0i(h+k@m5n=6p')
 
-
 # SECURITY WARNING: don't run with debug turned on in production!
 # DEBUG should always be False in production for security and performance
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
-
+# It now defaults to False unless explicitly set to 'True' in an environment variable.
+DEBUG = os.environ.get('DEBUG_MODE', 'False') == 'True'  # Changed variable name for clarity and default
 
 # ALLOWED_HOSTS is crucial for security in production.
 # Add your Render app's URL here (e.g., 'your-app-name.onrender.com')
 # Keep 'localhost' and '127.0.0.1' for local development.
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1','https://myshopdjango.onrender.com']
 # Add your Render app's domain after it's deployed. Example:
 # ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'myshop-django.onrender.com']
 
@@ -45,125 +43,4 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'shop', # Your shop app
-    # Add any other apps here
-]
-
-MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    # WhiteNoiseMiddleware must be placed directly after Django's SecurityMiddleware
-    'whitenoise.middleware.WhiteNoiseMiddleware', # Added for serving static files in production
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-]
-
-ROOT_URLCONF = 'myshop.urls'
-
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')], # Add your project-wide templates directory
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
-        },
-    },
-]
-
-WSGI_APPLICATION = 'myshop.wsgi.application'
-
-
-# Database
-# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-
-# Use dj_database_url to parse the DATABASE_URL environment variable for Render
-# Fallback to SQLite for local development
-DATABASES = {
-    'default': dj_database_url.config(
-        default='sqlite:///db.sqlite3', # Local SQLite database
-        conn_max_age=600 # Optional: connection pooling for performance
-    )
-}
-
-
-# Password validation
-# https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
-
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
-
-
-# Internationalization
-# https://docs.djangoproject.com/en/5.0/topics/i18n/
-
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
-USE_I18N = True
-
-USE_TZ = True
-
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.0/howto/static-files/
-
-STATIC_URL = 'static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') # Directory where static files will be collected for production
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage' # For serving compressed static files
-
-
-# Media files (for user uploads like product images)
-# For production, consider using cloud storage like AWS S3.
-# For simple Render deployments, they will be stored on the server,
-# but might not persist across deploys without external storage.
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-
-# Custom User Model (if you've defined one)
-# Make sure this matches your AUTH_USER_MODEL in models.py if you created CustomUser
-# For example: AUTH_USER_MODEL = 'shop.CustomUser'
-# If you don't have a custom user model, you can remove or comment this line.
-AUTH_USER_MODEL = 'shop.CustomUser'
-
-
-# Django Messages Framework settings (if you want to customize)
-MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
-
-# Redirect to home URL after login (customize as needed)
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/'
+    'django.contrib.admi
